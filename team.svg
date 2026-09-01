@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 614" width="920" height="614" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <!-- sub-session protocol diagram. Copyright 2026 Zheng Luo (Davies Luo).
+       Licensed under the Apache License 2.0, whose text is the
+       LICENSE file shipped beside this file. -->
+  <rect width="920" height="614" fill="#ffffff"/>
+  <defs>
+    <marker id="down" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2a78d6"/>
+    </marker>
+    <marker id="up" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1baf7a"/>
+    </marker>
+    <marker id="grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <!-- user -->
+  <rect x="385" y="18" width="150" height="46" rx="23" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="460" y="47" text-anchor="middle" font-size="17" font-weight="600" fill="#1f2328">user</text>
+
+  <!-- user to master, both ways -->
+  <line x1="460" y1="70" x2="460" y2="106" stroke="#57606a" stroke-width="1.6" marker-start="url(#grey)" marker-end="url(#grey)"/>
+  <text x="472" y="94" font-size="12.5" fill="#57606a">asks, decides, is told what happened</text>
+
+  <!-- master -->
+  <path d="M 385 41 H 60 V 358" fill="none" stroke="#57606a" stroke-width="1.4"
+        stroke-dasharray="5 4" marker-end="url(#grey)"/>
+  <text x="68" y="216" font-size="11.5" fill="#57606a">and directly to any seat,</text>
+  <text x="68" y="232" font-size="11.5" fill="#57606a">which answers in its own window</text>
+  <rect x="230" y="112" width="460" height="96" rx="10" fill="#eaf2fd" stroke="#2a78d6" stroke-width="2"/>
+  <text x="460" y="142" text-anchor="middle" font-size="18" font-weight="700" fill="#0b3d7a">MASTER session</text>
+  <text x="460" y="164" text-anchor="middle" font-size="13.5" fill="#0b3d7a">e.g. Claude Code</text>
+  <text x="460" y="190" text-anchor="middle" font-size="12.5" fill="#1f2328">judgement, edits, merges, adjudication, the ledger</text>
+
+  <!-- the bus is the git remote, and nothing passes between sessions directly -->
+  <line x1="460" y1="208" x2="460" y2="236" stroke="#57606a" stroke-width="1.6"/>
+  <rect x="110" y="236" width="700" height="42" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.6"/>
+  <text x="460" y="253" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1f2328">the git remote, the only thing any two sessions share</text>
+  <text x="460" y="270" text-anchor="middle" font-size="11" fill="#57606a">every inbox on the integration branch, every outbox on the branch of the seat that owns it</text>
+
+  <!-- three drops, inbox down (blue) and outbox up (green) side by side -->
+  <g stroke-width="1.8">
+    <line x1="138" y1="278" x2="138" y2="366" stroke="#2a78d6" marker-end="url(#down)"/>
+    <line x1="162" y1="366" x2="162" y2="278" stroke="#1baf7a" marker-end="url(#up)"/>
+    <line x1="448" y1="278" x2="448" y2="366" stroke="#2a78d6" marker-end="url(#down)"/>
+    <line x1="472" y1="366" x2="472" y2="278" stroke="#1baf7a" marker-end="url(#up)"/>
+    <line x1="758" y1="278" x2="758" y2="366" stroke="#2a78d6" marker-end="url(#down)"/>
+    <line x1="782" y1="366" x2="782" y2="278" stroke="#1baf7a" marker-end="url(#up)"/>
+  </g>
+  <text x="176" y="308" font-size="11.5" fill="#2a78d6">INBOX_a.md</text>
+  <text x="176" y="324" font-size="11.5" fill="#1baf7a">OUTBOX_a.md</text>
+  <text x="486" y="308" font-size="11.5" fill="#2a78d6">INBOX_b.md</text>
+  <text x="486" y="324" font-size="11.5" fill="#1baf7a">OUTBOX_b.md</text>
+  <text x="796" y="308" font-size="11.5" fill="#2a78d6">INBOX_c.md</text>
+  <text x="796" y="324" font-size="11.5" fill="#1baf7a">OUTBOX_c.md</text>
+
+  <!-- sub-sessions -->
+  <g>
+    <rect x="20" y="366" width="260" height="124" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="1.8"/>
+    <text x="150" y="395" text-anchor="middle" font-size="15.5" font-weight="700" fill="#1f2328">SUB-SESSION a</text>
+    <text x="150" y="416" text-anchor="middle" font-size="13" fill="#1f2328">compute seat</text>
+    <text x="150" y="436" text-anchor="middle" font-size="12.5" fill="#57606a">e.g. Cursor</text>
+    <text x="150" y="464" text-anchor="middle" font-size="11.5" fill="#57606a">long jobs, detached runner,</text>
+    <text x="150" y="479" text-anchor="middle" font-size="11.5" fill="#57606a">pushes branch a only</text>
+  </g>
+  <g>
+    <rect x="330" y="366" width="260" height="124" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="1.8"/>
+    <text x="460" y="395" text-anchor="middle" font-size="15.5" font-weight="700" fill="#1f2328">SUB-SESSION b</text>
+    <text x="460" y="416" text-anchor="middle" font-size="13" fill="#1f2328">review seat</text>
+    <text x="460" y="436" text-anchor="middle" font-size="12.5" fill="#57606a">e.g. Claude Code</text>
+    <text x="460" y="464" text-anchor="middle" font-size="11.5" fill="#57606a">independent verification,</text>
+    <text x="460" y="479" text-anchor="middle" font-size="11.5" fill="#57606a">pushes branch b only</text>
+  </g>
+  <g>
+    <rect x="640" y="366" width="260" height="124" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="1.8"/>
+    <text x="770" y="395" text-anchor="middle" font-size="15.5" font-weight="700" fill="#1f2328">SUB-SESSION c</text>
+    <text x="770" y="416" text-anchor="middle" font-size="13" fill="#1f2328">review seat</text>
+    <text x="770" y="436" text-anchor="middle" font-size="12.5" fill="#57606a">e.g. Codex</text>
+    <text x="770" y="464" text-anchor="middle" font-size="11.5" fill="#57606a">a second, unrelated reading,</text>
+    <text x="770" y="479" text-anchor="middle" font-size="11.5" fill="#57606a">pushes branch c only</text>
+  </g>
+
+  <!-- legend -->
+  <rect x="20" y="520" width="880" height="76" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1.2"/>
+  <line x1="42" y1="544" x2="86" y2="544" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#down)"/>
+  <text x="98" y="548" font-size="12.5" fill="#1f2328">the master writes numbered instructions into each seat's inbox, on the integration branch</text>
+  <line x1="42" y1="570" x2="86" y2="570" stroke="#1baf7a" stroke-width="1.8" marker-end="url(#up)"/>
+  <text x="98" y="574" font-size="12.5" fill="#1f2328">each seat appends results, findings and escalations to its own outbox, on its own branch, and pushes</text>
+</svg>
