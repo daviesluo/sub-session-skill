@@ -5,12 +5,16 @@
 #
 # Prove that every non-empty line of the original v1.0 SKILL.md still
 # appears, exactly, in today's SKILL.md or a file under references/.
-# The original is commit 7148399 (the squashed first release on main)
-# unless ORIG_SKILL points at a file, or a commit-ish is given as $1.
+# The original is commit 71483995d93c6e09321c62f3a0280eae8dc4ee05
+# (the squashed first release on main, short 7148399) unless ORIG_SKILL
+# points at a file, or a commit-ish is given as $1.
 #
 #   sh scripts/check-skill-coverage.sh
 #   sh scripts/check-skill-coverage.sh 7148399
 #   ORIG_SKILL=/path/to/old/SKILL.md sh scripts/check-skill-coverage.sh
+#
+# A shallow clone (GitHub Actions' default fetch-depth: 1) does not
+# contain that commit. The script fetches it from origin when missing.
 #
 # This script is not one of the seven protocol scripts. It lives under
 # scripts/ so the self-test's "all seven" parse loop is not enlarged.
@@ -19,7 +23,8 @@ set -e
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT" || exit 1
 
-ORIG_COMMIT=${1:-7148399}
+# Full SHA so `git fetch origin <sha>` works on a shallow clone.
+ORIG_COMMIT=${1:-71483995d93c6e09321c62f3a0280eae8dc4ee05}
 DEST=$ROOT/.coverage-dest.txt
 MISSING=$ROOT/.coverage-missing.txt
 rm -f "$DEST" "$MISSING"
@@ -40,6 +45,10 @@ if [ -n "${ORIG_SKILL:-}" ] && [ -f "$ORIG_SKILL" ]; then
   ORIG=$ORIG_SKILL
 else
   ORIG=$ROOT/.coverage-orig.txt
+  if ! git cat-file -e "$ORIG_COMMIT^{commit}" 2>/dev/null; then
+    # actions/checkout defaults to depth 1; pull the v1.0 commit only.
+    git fetch --no-tags --depth=1 origin "$ORIG_COMMIT"
+  fi
   git show "$ORIG_COMMIT:SKILL.md" > "$ORIG"
 fi
 
