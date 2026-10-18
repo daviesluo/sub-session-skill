@@ -1365,20 +1365,25 @@ echo "31. the settings table in the protocol still matches the scripts"
 # paid for that class of defect three times in documents nobody could check,
 # so the one table it ships is checked by the suite instead of by attention.
 #
-# It reads section 3's table out of SKILL.md, pulls every `FOO=${FOO:-x}`
-# default out of the scripts, and compares them. A dial with no such line is
-# one read inline with no default, which the table records as unset.
-SK="$HERE/../SKILL.md"
+# It reads section 3's table out of references/liveness.md (the
+# unchanged section 3 after the SKILL.md split), pulls every
+# `FOO=${FOO:-x}` default out of the scripts, and compares them. A dial
+# with no such line is one read inline with no default, which the table
+# records as unset. SKILL.md is the fallback when this install still
+# keeps the table in the protocol file itself.
+SK="$HERE/../references/liveness.md"
+[ -f "$SK" ] || SK="$HERE/../SKILL.md"
+[ -f "$SK" ] || SK="$HERE/../../../../references/liveness.md"
 [ -f "$SK" ] || SK="$HERE/../../../../SKILL.md"
 if [ ! -f "$SK" ]; then
-  ok "no SKILL.md beside this package, so there is no table to check"
+  ok "no settings table beside this package, so there is no table to check"
 else
   rm -f "$T/dial.bad"
   # every table row: dial names in column one, default in column three
   awk -F'|' '/^\| *`[A-Z_]+`/ {print $2 "\t" $3 "\t" $4}' "$SK" | tr -d '`' > "$T/dials.txt"
   rows=$(awk 'END{print NR}' "$T/dials.txt")
   if [ "${rows:-0}" -lt 10 ]; then
-    bad "found only ${rows:-0} dial rows in SKILL.md, so the table moved or was lost"
+    bad "found only ${rows:-0} dial rows in the settings table, so the table moved or was lost"
   else
     ok "found $rows dial rows in the protocol's settings table"
     while IFS="$(printf '\t')" read -r names owners defaults; do

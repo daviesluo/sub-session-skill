@@ -1,0 +1,20 @@
+{
+  "name": "sub-session",
+  "version": "1.0.1",
+  "description": "Master and sub-session collaboration protocol. One master merges; seats compute and review on their own branches through committed git files.",
+  "author": {
+    "name": "Davies Luo",
+    "url": "https://github.com/daviesluo"
+  },
+  "homepage": "https://github.com/daviesluo/sub-session-skill",
+  "repository": "https://github.com/daviesluo/sub-session-skill",
+  "license": "Apache-2.0",
+  "keywords": [
+    "multi-agent",
+    "git",
+    "claude-code",
+    "codex",
+    "cursor"
+  ],
+  "skills": ["."]
+}

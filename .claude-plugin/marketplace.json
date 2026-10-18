@@ -1,0 +1,20 @@
+{
+  "name": "sub-session-skill",
+  "owner": {
+    "name": "Davies Luo",
+    "url": "https://github.com/daviesluo"
+  },
+  "metadata": {
+    "description": "Run Claude Code, Codex and Cursor as one team on one repo, with git as the only message bus.",
+    "version": "1.0.1"
+  },
+  "plugins": [
+    {
+      "name": "sub-session",
+      "source": ".",
+      "description": "Master and sub-session collaboration protocol. One master merges; seats compute and review on their own branches through committed git files.",
+      "version": "1.0.1",
+      "strict": false
+    }
+  ]
+}

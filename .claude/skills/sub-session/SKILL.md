@@ -21,13 +21,16 @@ Copyright 2026 Zheng Luo (Davies Luo), Apache License 2.0, whose text
 is the LICENSE file in this package. Keep this line when you copy the
 file.
 
-This file is a POINTER, not the protocol. The protocol is ONE file,
-`SKILL.md` at the root of this package, so that Claude Code, Cursor,
-Codex and anything reading `AGENTS.md` all load the same text and no
-copy can go stale against another.
+This file is a POINTER, not the protocol. The protocol is `SKILL.md`
+at the root of this package plus the files it links under
+`references/`, so that Claude Code, Cursor, Codex and anything
+reading `AGENTS.md` all load the same text and no copy can go stale
+against another.
 
-READ THE PROTOCOL NOW, in full, before acting on anything this skill
-covers. It is `SKILL.md` at the ROOT OF THIS PACKAGE, which is
+READ THE PROTOCOL NOW, starting with `SKILL.md` in full, before acting
+on anything this skill covers. Follow every link from that file under
+`references/` when the work reaches that section. It is `SKILL.md` at
+the ROOT OF THIS PACKAGE, which is
 `../../../SKILL.md` relative to THIS FILE and plain `SKILL.md` from the
 package root. Those are different starting points and a session usually
 stands at the second, so if one does not resolve try the other, and if
@@ -37,7 +40,8 @@ one does, that it is a pointer.
 Do not act on this file alone.
 
 Everything beside the protocol is part of the same package: the
-`README.md`, the `APPENDIX.md`, a worked `EXAMPLE.md`, and under `bin/`
+`README.md`, the `APPENDIX.md`, a worked `EXAMPLE.md`, the
+`references/` files the protocol links to, and under `bin/`
 the two watchers, the injector, the notifier, the supervisor, the
 master rehearsal, and the self-test that syntax checks all seven and
 exercises all seven.

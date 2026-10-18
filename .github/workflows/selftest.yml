@@ -1,0 +1,26 @@
+name: self-test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  selftest:
+    name: self-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # Coverage compares SKILL.md against the v1.0 commit on main.
+          # Depth 1 (the default) cannot see that object.
+          fetch-depth: 0
+      - name: Check SKILL.md line coverage
+        run: sh scripts/check-skill-coverage.sh
+      - name: Run the shipped self-test
+        run: sh bin/selftest.sh

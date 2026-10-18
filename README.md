@@ -1,16 +1,90 @@
 # sub-session
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0-brightgreen.svg)](#version)
-[![Self-test](https://img.shields.io/badge/self--test-58%20cases-brightgreen.svg)](#install-and-invoke)
+[![Version](https://img.shields.io/badge/version-1.0.1-brightgreen.svg)](#version)
+[![Self-test](https://github.com/daviesluo/sub-session-skill/actions/workflows/selftest.yml/badge.svg)](https://github.com/daviesluo/sub-session-skill/actions/workflows/selftest.yml)
 [![Tools](https://img.shields.io/badge/runs%20on-Claude%20Code%20%C2%B7%20Cursor%20%C2%B7%20Codex-lightgrey.svg)](#it-runs-anywhere-and-mixing-tools-is-the-point)
 
-Run two or more AI sessions on one repository as a coordinated team:
-one MASTER that owns judgement, edits and merges, and one or more
-SUB-SESSIONS that carry long compute and review everything
-independently. They talk through committed git files, so the team
-works across any mix of platforms, survives a crash on either side,
-and leaves its whole conversation in the repository's history.
+**Run Claude Code, Codex and Cursor as one team on one repo, with git as the only message bus.**
+
+One master session holds judgement and is the only one that merges. One or more
+sub-sessions run long jobs or review everything independently, each on its own
+branch. They talk through two markdown files per seat, and every file has exactly
+one writer, so push races and overwritten work cannot happen: the bus is plain
+git, so it survives crashes, works across machines and vendors, and leaves the
+whole conversation in your history.
+
+![A master shell pushes an instruction; a second shell standing in for a seat
+receives it, writes an outbox reply, and a three-line notification
+prints.](docs/demo.gif)
+
+## Install
+
+```sh
+npx skills add daviesluo/sub-session-skill
+# or: npx skills add daviesluo/sub-session-skill -a claude-code
+#     npx skills add daviesluo/sub-session-skill -a cursor
+#     npx skills add daviesluo/sub-session-skill -a codex
+```
+
+That finds one skill (`sub-session`) and copies the package, including `bin/`
+with executable bits, into `.claude/skills/sub-session` (or the matching
+scanned path for the agent you pick). On Claude Code 2.1.275 or later you can
+instead install the same skill as a plugin:
+
+```
+/plugin install sub-session --marketplace daviesluo/sub-session-skill
+```
+
+Then tell your main session: "You are the master. Set up a sub-session team."
+It creates the bus files, prints a starter prompt for the seat, and measures
+the link.
+
+Optional, about 15 minutes: `cd .claude/skills/sub-session && sh bin/selftest.sh`.
+
+Installing the folder by hand, and how pointers relate to scanned paths, is
+[further down](#how-the-skill-loads).
+
+## Quickstart (60 seconds)
+
+1. Run the install command above.
+2. In your main session, say: "You are the master. Set up a sub-session team."
+3. Paste the starter prompt it prints into a second session — another tool, or
+   another window on the same tool.
+4. Tell the master you are done. It sends a no-op handshake; the seat
+   acknowledges; both windows report the measured lag.
+
+## When to use it
+
+- A long job (training run, data rebuild, big migration) has to run while you
+  keep editing.
+- You want a second model, ideally from another vendor, to review every change.
+- You already juggle several agent windows and are tired of copy-pasting
+  between them.
+
+**When not to use it:** helper subagents that live inside one session. Use
+your tool's built-in subagents for that. This protocol is for real sessions,
+each on a real platform, each with its own branch.
+
+## Compared to Claude Squad and OpenRig
+
+Cells for Claude Squad and OpenRig are taken from those projects' READMEs
+(fetched 2026-10-18; re-checked the same day). A cell nobody can verify from
+the README is marked "not stated in README". In-tool subagents are not in
+this table.
+
+| | sub-session | [Claude Squad](https://github.com/smtg-ai/claude-squad) | [OpenRig](https://github.com/mvschwarz/openrig) |
+|---|---|---|---|
+| Agents it can run | anything with a shell; loading checked on Claude Code, Codex, Cursor, opencode, grok | Claude Code, Codex, Gemini, Aider and other local agents (`cs -p "<program>"`) | Claude Code and Codex sessions, terminal nodes, Pi / Oh My Pi via RPC runners |
+| Mix vendors in one team | yes | yes (one per instance) | yes ("Claude Code and Codex in the same rig") |
+| How it runs | 7 POSIX shell scripts, no daemon | terminal TUI on tmux + git worktrees; needs tmux and gh | local daemon + CLI + TUI + MCP server on tmux, SQLite; Node.js 22/24; macOS/Linux (Windows via WSL2) |
+| Seats on different machines | yes, any shared git remote | not stated in README (describes "local agents" in tmux) | not stated in README. RigBundle "share topologies across machines" shares team definitions, not a live cross-machine team |
+| Isolation per agent | own branch | own git worktree / branch per task | not stated in README as per-seat branches |
+| Messages between agents | committed `INBOX` / `OUTBOX` files | not stated in README (human attaches to each session) | `rig send` / MCP tools (`rig_send`, `rig_chatroom_send`), queue |
+| Resume after crash or stop | state is commits | pause (`c`) / resume (`r`) a session; crash recovery not stated | `rig down --snapshot` then `rig up` restores; per-node outcome (resumed / fresh-primed / …) |
+| Audit trail of the conversation | git history | not stated in README | not stated as a conversation history (it mentions `bundle-audit.jsonl` for installs and audited permission changes only) |
+| Single merge authority | enforced (master only) | not stated in README ("review changes before applying them") | not stated in README (roles like lead/builder/reviewer exist) |
+| License | Apache-2.0 | AGPL-3.0 | Apache-2.0 |
 
 ## The problem
 
@@ -38,12 +112,12 @@ and c are review seats doing independent verification and a second
 unrelated reading, and each sits on whichever tool suits its job,
 Cursor, Claude Code and Codex in the example.](team.svg)
 
-**Four terms carry the rest of this page.** A SEAT is one sub-session: a
+**Four terms carry the rest of this page.** A **seat** is one sub-session: a
 real session on a real platform, with a branch, an inbox and an outbox
-of its own. Its LANE is the file set it may write, everything else in
-the tree being read-only to it. The INTEGRATION BRANCH is the one the
+of its own. Its **lane** is the file set it may write, everything else in
+the tree being read-only to it. The **integration branch** is the one the
 master owns and merges into, `main` in most repositories and `develop`
-or `trunk` in some. The BUS FILES are two markdown files per seat,
+or `trunk` in some. The **bus files** are two markdown files per seat,
 `INBOX_<name>.md` and `OUTBOX_<name>.md`, in a directory of your
 choosing: **every inbox lives on the integration branch and is written
 only by the master, and every outbox lives on the branch of the seat
@@ -54,23 +128,27 @@ The master is the normal control point, and the user can always speak to
 a seat directly, which is why every session answers in its own window. It
 holds judgement, edits, adjudication and the project ledger, a running
 record of what is done and what remains that the companion protocol at
-the foot of this page defines, and IT IS THE ONLY SESSION ALLOWED TO
-MERGE. Each sub-session owns one branch and one outbox and touches
+the foot of this page defines, and **it is the only session allowed to
+merge**. Each sub-session owns one branch and one outbox and touches
 nothing else, so two writers never meet and a push race cannot happen.
 
-## Install and invoke
+## How the skill loads
 
-**To try it, clone https://github.com/daviesluo/sub-session-skill and
-open it with your tool.** That repository is this folder and nothing
-else, so the two pointers below land at the paths the tools scan, and
-whichever route a tool takes it reaches ONE `SKILL.md`, so no copy can go
-stale against another.
+**To try it, the [install](#install) one-liner is enough.** The rest of
+this section is for installing the folder by hand, or for understanding
+how a tool finds the protocol.
+
+Clone https://github.com/daviesluo/sub-session-skill and open it with
+your tool. That repository is this folder and nothing else, so the two
+pointers below land at the paths the tools scan, and whichever route a
+tool takes it reaches one `SKILL.md`, so no copy can go stale against
+another.
 
 | Tool | Where it looks | How a session reaches it |
 |---|---|---|
 | Claude Code | `.claude/skills/sub-session/SKILL.md` | `/sub-session`, a registered skill |
-| Cursor, Codex, other `AGENTS.md` tools, WITH a pointer at `.agents/skills/sub-session/SKILL.md` | that path | a registered skill, `$sub-session` or `/sub-session` |
-| The same tools where no pointer sits at a scanned path, the folder embedded deeper in a host repository | one line in `AGENTS.md` | the model READS the file. There is no slash command |
+| Cursor, Codex, other `AGENTS.md` tools, with a pointer at `.agents/skills/sub-session/SKILL.md` | that path | a registered skill, `$sub-session` or `/sub-session` |
+| The same tools where no pointer sits at a scanned path, the folder embedded deeper in a host repository | one line in `AGENTS.md` | the model reads the file. There is no slash command |
 | Anything else with a shell | nothing to scan | paste `SKILL.md` in as the session's briefing |
 
 Loading was checked on real installs of Claude Code, Codex, Cursor,
@@ -82,17 +160,19 @@ package grew up in ran on the second one. No tested CLI needed a restart,
 so if yours cannot find the skill, restart it before debugging anything
 else.
 
-**To install it in a repository of your own,** copy this folder in
-SOMEWHERE THAT IS NOT ITSELF A SCANNED PATH, add one pointer at the path
+**To install it in a repository of your own by hand,** copy this folder in
+somewhere that is not itself a scanned path, add one pointer at the path
 your tool does scan, and **delete the two that came with the folder**.
 A pointer is `SKILL.md`'s own front matter plus a few lines naming
 `SKILL.md`, and the two shipped here are the template: copy one out and
-fix its relative path, which is the only part that changes. THE ORDER
-MATTERS. Drop the folder straight onto `.claude/skills/sub-session/` and
+fix its relative path, which is the only part that changes. **The order
+matters.** Drop the folder straight onto `.claude/skills/sub-session/` and
 `SKILL.md` is already at the scanned path, so writing a pointer there
 overwrites the protocol. Either put the folder at a path of your own and
 point at it, or put it on the scanned path and add no pointer at all.
-What you keep is two paths and ONE copy of the protocol.
+What you keep is two paths and one copy of the protocol. The
+`references/` files next to `SKILL.md` are part of that copy; they have
+to travel with it.
 
 Then run the self-test, before you trust the watchers on this machine:
 
@@ -121,11 +201,12 @@ one question.
    handful of commands a wake-up, a stand-down and a watcher restart
    need to whatever that tool uses to approve commands, so no dialog can
    interrupt one. Section 7 of `SKILL.md` names those calls and says how
-   to tell it took.
+   to tell it took; the pasteable starter prompts are in
+   [`references/setup.md`](references/setup.md).
 2. The master emits the first sub-session's starter prompt, complete
    and copy-paste ready. The user pastes it into a session on the
    other platform and says one word back.
-3. The master runs a HANDSHAKE: a no-op instruction goes to the new
+3. The master runs a handshake: a no-op instruction goes to the new
    seat's inbox, the seat acknowledges, and both sides report in
    their own chat windows that the link is up and what the measured
    lag is in each direction, with the master naming what would
@@ -139,13 +220,14 @@ one question.
 If the master cannot drive this, which happens on a tool with no shell
 of its own and on a seat whose platform blocks the setup calls, the same
 five steps work by hand. Create the bus files and push them, paste the
-starter prompt from section 7 of `SKILL.md` with its seven placeholders
-filled in at all sixteen of the places they appear, including the two long
-ones that wrap across lines and are easy to miss. Then send the handshake
-yourself by appending one no-op instruction to the seat's inbox and
-pushing it. The seat's acknowledgement lands in its outbox on the remote
-either way, and the gap between the two pushes is the same measured lag.
-Nothing in the protocol needs the automation, which only removes typing.
+starter prompt from [`references/setup.md`](references/setup.md) with its
+seven placeholders filled in at all sixteen of the places they appear,
+including the two long ones that wrap across lines and are easy to miss.
+Then send the handshake yourself by appending one no-op instruction to
+the seat's inbox and pushing it. The seat's acknowledgement lands in its
+outbox on the remote either way, and the gap between the two pushes is
+the same measured lag. Nothing in the protocol needs the automation,
+which only removes typing.
 
 ## What you get
 
@@ -219,13 +301,13 @@ asynchronous: the keystroke returns when enter is pressed while the turn
 runs on inside the application. An injector that returned there would drop
 the watcher's lock with its own turn still going, and the next change would
 start a second turn beside it. So it blocks until the seat reports
-completion, and it waits on a TOKEN minted per injection rather than on a
+completion, and it waits on a token minted per injection rather than on a
 timestamp, because a shared stamp file cannot say whose turn finished.
 
 | outcome | what it means | what the watcher does |
 |---|---|---|
 | finished | the seat echoed the token | records the change handled |
-| **may still be running** | the outcome is unknown: the wait timed out, a delivery was abandoned mid-flight, or typing failed part way through the line | **KEEPS the lock, starts nothing beside it**, until the `HOLD` quarantine expires and reclaim can free it |
+| **may still be running** | the outcome is unknown: the wait timed out, a delivery was abandoned mid-flight, or typing failed part way through the line | **keeps the lock, starts nothing beside it**, until the `HOLD` quarantine expires and reclaim can free it |
 | never typed | no grant, wrong app, no window, or another seat held the machine-wide lock for the whole wait | retries freely, nothing is running |
 
 The middle row is the safety argument. These are the failures that cannot
@@ -305,8 +387,10 @@ clone's git directory: a restart replays nothing, skips nothing, and
 delivers whatever landed while it was down. Without that property a
 supervisor would be a way of losing entries on a schedule.
 
-Sections 2 and 3 of `SKILL.md` carry the commands for all three, and the
-settings table in section 3 names every dial each one reads.
+Sections 2 and 3 of the protocol carry the commands for all three
+(`SKILL.md` and [`references/bus.md`](references/bus.md),
+[`references/liveness.md`](references/liveness.md)), and the settings
+table in section 3 names every dial each one reads.
 
 ## It runs anywhere, and mixing tools is the point
 
@@ -331,18 +415,22 @@ compute seat on a cluster.
 
 | File | What it is |
 |---|---|
-| `SKILL.md` | The protocol itself, and the only file a session needs to read. Ten sections: roles, the bus, liveness, work design, verification, multi-seat setups, setup with its three pasteable prompts, running on any tool, the budget economy, and why the protocol has this shape. |
+| `SKILL.md` | The protocol a session loads first: roles, the bus rule, setup, and one-level links into `references/`. The body is kept under 500 lines. |
+| `references/` | The rest of the protocol, unchanged: bus details, liveness (including the settings table), work design, verification, multi-seat, setup prompts, any-tool notes, economy, design notes. |
 | `APPENDIX.md` | The two parts you read once and then leave alone: what each tool actually gives you, with the failures a live deployment paid to learn, and the reasoning under the design. |
 | `README.md` | This page. |
 | `.agents/skills/sub-session/SKILL.md`, `.claude/skills/sub-session/SKILL.md` | Two pointers, each `SKILL.md`'s own front matter plus a few lines: which file to read, how to find it if the relative path does not resolve, and what else is in the package. They are what makes the skill load on every tool that scans either path, from one copy of the protocol, and they are the template to adapt when installing the folder elsewhere. |
 | `EXAMPLE.md` | A worked inbox and outbox pair, so the shapes are concrete before you write your own. |
-| `bin/watch-outbox.sh` | The master runs this one. It watches a seat's branch and prints the NEW OUTBOX ENTRIES as they land, not merely that the branch moved, because an ack, a finding and an escalation are all outbox lines and a head SHA carries none of them. Set `DUE=<seconds>` and it also reports SILENCE, once, when a seat has not spoken for that long. |
+| `bin/watch-outbox.sh` | The master runs this one. It watches a seat's branch and prints the new outbox entries as they land, not merely that the branch moved, because an ack, a finding and an escalation are all outbox lines and a head SHA carries none of them. Set `DUE=<seconds>` and it also reports silence, once, when a seat has not spoken for that long. |
 | `bin/watch-inbox.sh` | The seat runs this one. It watches the integration branch and prints its inbox when it changes, and with `ON_CHANGE` set it starts a real agent turn instead of printing into a room with nobody in it. A failed turn is retried, then eased off, never abandoned. Set `NOTIFY` and every state change reaches a window a person is actually watching, and leave it empty and the watcher says so as it arms, since an unwired watcher and a quiet lane look the same from outside. |
-| `bin/inject.sh` | Delivers one line into a seat's running conversation, then WAITS for that turn to finish, identified by a nonce it mints. It types and presses enter by default. Set `INJECT_CMD` and it hands the line to a command instead, which is better wherever the platform has a real delivery route. Point a watcher's `ON_CHANGE` at it and the seat's own window does the work, where the person paying for it can see. See the section below: this is the preferred path, not an extra. |
+| `bin/inject.sh` | Delivers one line into a seat's running conversation, then waits for that turn to finish, identified by a nonce it mints. It types and presses enter by default. Set `INJECT_CMD` and it hands the line to a command instead, which is better wherever the platform has a real delivery route. Point a watcher's `ON_CHANGE` at it and the seat's own window does the work, where the person paying for it can see. See the section below: this is the preferred path, not an extra. |
 | `bin/supervise.sh` | Runs a watcher and keeps it running. It adopts and kills an orphan whose output can no longer reach anyone, and restarts on exit with an escalating backoff. Use it wherever the thing that starts a watcher can itself expire, which on several tools it does on a fixed schedule. |
 | `bin/notify.sh` | The `NOTIFY` recipe, shipped rather than described. One desktop notification per state change except arming, in the team's single format, on macOS, Linux or Windows, ranked for loudness by the rule above. On a machine with no notifier it says so on every state and still exits zero, because a view of the work must never be able to stop the work. Set `NOTIFY_ECHO` and it prints the three parts instead, which is how you see what a seat will show before arming it. |
-| `bin/master-check.sh` | Rehearses the MASTER half of the protocol on whatever tool you are running, and prints a report plus four questions no script can answer. Run it once per platform you might put a master on. IT PUSHES TWO BRANCHES TO YOUR REAL REMOTE, `rehearsal/<name>-integ` and `rehearsal/<name>-seat`, and deletes them at the end, because being able to push is the capability under test. A seat told to run it is having its lane widened, so the instruction that assigns it has to say so by name, and the operator needs branch DELETE permission as well as push. |
+| `bin/master-check.sh` | Rehearses the master half of the protocol on whatever tool you are running, and prints a report plus four questions no script can answer. Run it once per platform you might put a master on. **It pushes two branches to your real remote**, `rehearsal/<name>-integ` and `rehearsal/<name>-seat`, and deletes them at the end, because being able to push is the capability under test. A seat told to run it is having its lane widened, so the instruction that assigns it has to say so by name, and the operator needs branch delete permission as well as push. |
 | `bin/selftest.sh` | Syntax checks all seven and exercises all seven against throwaway repositories, handing `bin/master-check.sh` an origin nobody owns, since it pushes rehearsal refs to whatever origin it finds. It needs no GNU coreutils, so it passes on stock macOS. The case and assertion counts are printed by the run itself, which is the only place worth trusting them from. |
+| `scripts/check-skill-coverage.sh` | Proves every non-empty line of the v1.0 `SKILL.md` still appears in today's `SKILL.md` or `references/`. Not one of the seven protocol scripts. |
+| `docs/demo.gif` | The short recording at the top of this page. |
+| `.claude-plugin/` | Claude Code marketplace and plugin manifests, so `/plugin marketplace add daviesluo/sub-session-skill` can resolve this skill. |
 | `team.svg` | The diagram above. |
 | `LICENSE`, `NOTICE` | Apache 2.0 and the notice that has to travel with any redistribution. |
 
@@ -355,9 +443,11 @@ Installed and self-tested per the table above, the working loop is:
    you assign anything real.
 2. Assign work by inbox, harvest by outbox, adjudicate every finding
    with reasons, merge a lane when its gates pass.
-3. Retire a seat the moment its work is done. Section 9 of `SKILL.md`
-   explains why that one habit dominates the running cost, and its
-   section 5 keeps the results honest while you do it.
+3. Retire a seat the moment its work is done. Section 9 of the protocol
+   ([`references/economy.md`](references/economy.md)) explains why that
+   one habit dominates the running cost, and section 5
+   ([`references/verification.md`](references/verification.md)) keeps
+   the results honest while you do it.
 
 ## What it does not do
 
@@ -395,18 +485,22 @@ A shell, git 2.13 or newer, push access to a shared remote, and
 permission to read the command lines of this session's own processes
 with `ps -o args= -p`, per session. The git version matters: the watcher
 scripts locate their state file with `git rev-parse --absolute-git-dir`
-and refuse to start without it. THE FOURTH IS EASY TO MISS AND A SANDBOX
-CAN WITHHOLD IT: where process identity is hidden, a watcher cannot tell
-its own kind from a stranger, so it refuses to adopt or to arm beside an
-unreadable owner rather than guessing, and the self-test reports that
-refusal. Run it outside the sandbox and the same build runs clean.
-Everything else is optional acceleration.
+and refuse to start without it. **The fourth is easy to miss, and a
+sandbox can withhold it:** where process identity is hidden, a watcher
+cannot tell its own kind from a stranger, so it refuses to adopt or to
+arm beside an unreadable owner rather than guessing, and the self-test
+reports that refusal. Run it outside the sandbox and the same build runs
+clean. Everything else is optional acceleration.
 
 ## Version
 
-**1.0, September 2026. First release.**
+**1.0.1, October 2026.** Packaging and documentation revision of the
+1.0 protocol (September 2026). The protocol text is the same; it now
+lives in `SKILL.md` plus `references/`. This repository also gained a
+Claude Code marketplace manifest, a self-test workflow, and the demo
+at the top of this page. Notes: [`docs/release-notes-v1.0.1.md`](docs/release-notes-v1.0.1.md).
 
-WHAT IS IN IT. The protocol, a bus made of committed git files, and seven
+**What is in it.** The protocol, a bus made of committed git files, and seven
 scripts. Two watchers carry the two directions of that bus. An injector puts
 a turn in a seat's own window and waits for it to finish. A notifier gives
 the whole team one notification format. A supervisor keeps a watcher alive
@@ -415,7 +509,7 @@ the protocol on a platform before a team trusts it there. A self-test
 syntax checks all seven, exercises all seven against throwaway
 repositories, and prints its own counts.
 
-WHERE IT HAS RUN. As a live team across Claude Code, Cursor, Codex and
+**Where it has run.** As a live team across Claude Code, Cursor, Codex and
 Antigravity. Every rule here that reads like a hard rule is one that a run
 broke without, and every number quoted in this file and in `APPENDIX.md` was
 measured on one of those runs rather than reasoned about.
